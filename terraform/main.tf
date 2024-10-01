@@ -35,18 +35,8 @@ resource "azurerm_linux_web_app" "main" {
 
   app_settings = {
     WEBSITES_ENABLE_APP_SERVICE_STORAGE = "false"
-    WEBSITES_ENTRYPOINT = "main.py"  
-  }
-
-  source_control {
-    repo_url          = "https://github.com/TomRuisseau/CloudComputingFirstProject.git"
-    branch            = "main"
-    manual_integration = false
   }
 }
-
-
-
 
 
 
@@ -64,6 +54,12 @@ resource "azurerm_cosmosdb_account" "main" {
     location          = azurerm_resource_group.main.location
     failover_priority = 0
   }
+}
+
+resource "azurerm_app_service_source_control" "main" {
+  app_id         =  azurerm_linux_web_app.main.id
+  repo_url       = "https://github.com/TomRuisseau/CloudComputingFirstProject"
+  branch         = "main"
 }
 
 resource "azurerm_cosmosdb_sql_database" "main" {
