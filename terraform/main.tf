@@ -28,13 +28,20 @@ resource "azurerm_linux_web_app" "main" {
   service_plan_id     = azurerm_service_plan.main.id
 
   site_config {
-   application_stack {
+    application_stack {
       python_version = "3.8"
     }
   }
 
   app_settings = {
     WEBSITES_ENABLE_APP_SERVICE_STORAGE = "false"
+    WEBSITES_ENTRYPOINT = "main.py"  
+  }
+
+  source_control {
+    repo_url          = "https://github.com/TomRuisseau/CloudComputingFirstProject.git"
+    branch            = "main"
+    manual_integration = false
   }
 }
 
