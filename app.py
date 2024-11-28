@@ -11,12 +11,34 @@ load_dotenv()
 app = Flask(__name__)
 app.config['SWAGGER'] = {
     'title': 'Shop WebApp API',
-    'version': '0.1.0', # Get from package.json
+    'version': '0.1.0',
     'description': 'API documentation for the Shop WebApp, providing endpoints for items, users, and baskets.',
     'specs_route': '/',
-    'termsOfService': '/terms'
 }
-swagger = Swagger(app)
+
+swagger_template= {
+    "swagger": "2.0",
+    "info": {
+        "title": "Shop WebApp API",
+        "description": "API documentation for the Shop WebApp, providing endpoints for items, users, and baskets.",
+        "version": "0.1.0"
+    },
+    "tags": [
+        {
+            "name": "1. Clear",
+            "description": "Clear all containers"
+        },
+        {
+            "name": "2. Add",
+            "description": "Add items, users, and baskets"
+        },
+        {
+            "name": "3. Retrieve",
+            "description": "Retrieve items, users, and baskets"
+        }
+    ],
+}
+swagger = Swagger(app, template=swagger_template)
 
 # Cosmos DB configuration
 COSMOS_ENDPOINT = os.getenv("COSMOS_ENDPOINT")
@@ -51,12 +73,48 @@ baskets_container = database.create_container_if_not_exists(
     offer_throughput=400
 )
 
+@app.route('/api/clear', methods=['DELETE'])
+def clear_containers():
+    """
+    Delete all items from all containers.
+    ---
+    tags:
+      - "1. Clear"
+    responses:
+      200:
+        description: All containers have been cleared.
+    """
+    # Delete items from items_container
+    for item in items_container.query_items(
+        query="SELECT * FROM items",
+        enable_cross_partition_query=True
+    ):
+        items_container.delete_item(item, partition_key=item['category'])
+
+    # Delete items from users_container
+    for user in users_container.query_items(
+        query="SELECT * FROM users",
+        enable_cross_partition_query=True
+    ):
+        users_container.delete_item(user, partition_key=user['user_id'])
+
+    # Delete items from baskets_container
+    for basket in baskets_container.query_items(
+        query="SELECT * FROM baskets",
+        enable_cross_partition_query=True
+    ):
+        baskets_container.delete_item(basket, partition_key=basket['user_id'])
+
+    return jsonify({"message": "All containers have been cleared."}), 200
+
 # Routes to add data
 @app.route('/api/items', methods=['POST'])
 def add_item():
     """
     Add a new item.
     ---
+    tags:
+      - "2. Add"
     parameters:
       - name: body
         in: body
@@ -84,12 +142,13 @@ def add_item():
     items_container.upsert_item(data)
     return jsonify({"message": "Item added successfully", "item": data}), 200
 
-
 @app.route('/api/users', methods=['POST'])
 def add_user():
     """
     Add a new user.
     ---
+    tags:
+      - "2. Add"
     parameters:
       - name: body
         in: body
@@ -114,12 +173,13 @@ def add_user():
     users_container.upsert_item(data)
     return jsonify({"message": "User added successfully", "user": data}), 200
 
-
 @app.route('/api/baskets', methods=['POST'])
 def add_basket():
     """
     Add a new basket.
     ---
+    tags:
+      - "2. Add"
     parameters:
       - name: body
         in: body
@@ -152,13 +212,14 @@ def add_basket():
     baskets_container.upsert_item(data)
     return jsonify({"message": "Basket added successfully", "basket": data}), 200
 
-
 # Routes to retrieve data
 @app.route('/api/items', methods=['GET'])
 def get_items():
     """
     Retrieve all items.
     ---
+    tags:
+      - "3. Retrieve"
     responses:
       200:
         description: List of items
@@ -167,12 +228,13 @@ def get_items():
     items = list(items_container.query_items(query=query, enable_cross_partition_query=True))
     return jsonify(items)
 
-
 @app.route('/api/users', methods=['GET'])
 def get_users():
     """
     Retrieve all users.
     ---
+    tags:
+      - "3. Retrieve"
     responses:
       200:
         description: List of users
@@ -181,12 +243,13 @@ def get_users():
     users = list(users_container.query_items(query=query, enable_cross_partition_query=True))
     return jsonify(users)
 
-
 @app.route('/api/baskets', methods=['GET'])
 def get_baskets():
     """
     Retrieve all baskets.
     ---
+    tags:
+      - "3. Retrieve"
     responses:
       200:
         description: List of baskets
@@ -195,43 +258,6 @@ def get_baskets():
     baskets = list(baskets_container.query_items(query=query, enable_cross_partition_query=True))
     return jsonify(baskets)
 
-
-@app.route('/api/clear', methods=['DELETE'])
-def clear_containers():
-    """
-    Delete all items from all containers.
-    ---
-    responses:
-      200:
-        description: All containers have been cleared.
-    """
-    # Delete items from items_container
-    for item in items_container.query_items(
-        query="SELECT * FROM items",
-        enable_cross_partition_query=True
-    ):
-        items_container.delete_item(item, partition_key=item['category'])
-
-    # Delete items from users_container
-    for user in users_container.query_items(
-        query="SELECT * FROM users",
-        enable_cross_partition_query=True
-    ):
-        users_container.delete_item(user, partition_key=user['user_id'])
-
-    # Delete items from baskets_container
-    for basket in baskets_container.query_items(
-        query="SELECT * FROM baskets",
-        enable_cross_partition_query=True
-    ):
-        baskets_container.delete_item(basket, partition_key=basket['user_id'])
-
-    return jsonify({"message": "All containers have been cleared."}), 200
-
-
-@app.route('/terms')
-def terms():
-    return render_template('terms.html')
 
 
 # Run the app
