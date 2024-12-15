@@ -1,11 +1,6 @@
 from flask import Flask, jsonify, request, render_template
 from azure.cosmos import CosmosClient, PartitionKey
-from dotenv import load_dotenv
 from flasgger import Swagger
-import os
-
-# Load environment variables
-load_dotenv()
 
 # Flask app setup
 app = Flask(__name__)
